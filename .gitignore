@@ -1,0 +1,13 @@
+# Ignore everything by default
+*
+
+# Un-ignore essential files/directories:
+!.gitignore
+!.dockerignore
+!docker-compose.yml
+!.env.example
+!Caddyfile
+!README.md
+!ollama-entrypoint.sh
+!start.sh
+!searxng/**

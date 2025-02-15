@@ -1,0 +1,160 @@
+services:
+  # --- Caddy Reverse Proxy for SearxNG ---
+  caddy:
+    container_name: caddy
+    image: docker.io/library/caddy:2-alpine
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data:rw
+      - caddy-config:/config:rw
+    deploy:
+      resources:
+        limits:
+          cpus: ${SEARXNG_CORE_CPUS}
+          memory: ${SEARXNG_CORE_MEMORY}
+    environment:
+      - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME}
+      - SEARXNG_TLS=${LETSENCRYPT_EMAIL}
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  # --- Redis for SearxNG ---
+  redis:
+    container_name: redis
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    networks:
+      - searxng_net
+    volumes:
+      - valkey-data2:/data
+    deploy:
+      resources:
+        limits:
+          cpus: ${SEARXNG_CORE_CPUS}
+          memory: ${SEARXNG_CORE_MEMORY}
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  # --- SearxNG Engine (with JSON output enabled) ---
+  searxng:
+    container_name: searxng
+    image: docker.io/searxng/searxng:latest
+    init: true
+    restart: unless-stopped
+    networks:
+      - searxng_net
+    ports:
+      - "${SEARXNG_PORT}:8080"
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME}/
+      - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS}
+      - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS}
+      - SEARXNG_REQUEST_TIMEOUT=30
+    deploy:
+      resources:
+        limits:
+          cpus: ${SEARXNG_CPUS}
+          memory: ${SEARXNG_MEMORY}
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  # --- Open WebUI Service (with bundled web search tool) ---
+  open_webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open_webui
+    restart: unless-stopped
+    ports:
+      - "${OPEN_WEBUI_PORT}:8080"
+    volumes:
+      - openwebui_data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:${OLLAMA_PORT}
+      - ENABLE_RAG_WEB_SEARCH=${ENABLE_RAG_WEB_SEARCH}
+      - RAG_WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://host.docker.internal:${SEARXNG_PORT}/search?q=<query>&format=json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          cpus: ${OPEN_WEBUI_CPUS}
+          memory: ${OPEN_WEBUI_MEMORY}
+    networks:
+      - ai_chat_net
+
+  # --- Ollama Service ---
+  ollama:
+    image: ollama/ollama:latest
+    profiles:
+      - containerized
+    container_name: ollama
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_PORT}:11434"
+    environment:
+      - GIN_MODE=release
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_MODELS=/root/.ollama/models
+      - OLLAMA_MODEL_LIST=${OLLAMA_MODEL_LIST}
+    entrypoint: ["/bin/sh", "-c", "/entrypoint.sh"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: ${GPU_DRIVER}
+              count: ${OLLAMA_GPU_COUNT}
+              capabilities:
+                - gpu
+        limits:
+          cpus: ${OLLAMA_CPUS}
+          memory: ${OLLAMA_MEMORY}
+    networks:
+      - ai_chat_net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./ollama-entrypoint.sh:/entrypoint.sh:ro
+      - ollama_data:/root/.ollama
+
+volumes:
+  caddy-data:
+  caddy-config:
+  valkey-data2:
+  openwebui_data:
+  ollama_data:
+
+networks:
+  searxng_net:
+    driver: bridge
+  ai_chat_net:
+    driver: bridge

@@ -1,0 +1,15 @@
+use_default_settings: true
+server:
+  bind_address: "0.0.0.0:8080"
+  limiter: false
+  secret_key: "notreallyasecretinnit"  # change this!
+
+search:
+  safe_search: 0
+  # Enable both HTML and JSON formats for search results.
+  formats:
+    - html
+    - json
+
+logging:
+  level: info

@@ -1,0 +1,11 @@
+:80 {
+    reverse_proxy searxng:8080
+    log {
+        output file /data/caddy_access.log {
+            roll_size 10mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+    }
+}

@@ -1,0 +1,7 @@
+# Ignore everything
+**
+
+# Un-ignore essential files/directories:
+!Caddyfile
+!searxng/**
+!ollama-entrypoint.sh
