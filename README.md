@@ -39,15 +39,17 @@ integration), and others, all running in isolated Docker containers.
     - [Docker Installation Guide](https://docs.docker.com/get-docker/)
 2. Install NVIDIA drivers if you have an NVIDIA GPU:
     - [NVIDIA Driver Download](https://www.nvidia.com/Download/index.aspx)
-3. Install CUDA Toolkit (optional but recommended for GPU acceleration):
+3. Install CUDA Toolkit (optional but recommended for native Nvidia GPU acceleration):
     - [CUDA Toolkit Download](https://developer.nvidia.com/cuda-toolkit)
+4. Install the NVIDIA Container Toolkit (optional but recommended for containerized Nvidia GPU acceleration):
+    - [CUDA Container Toolkit Download](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html)
 
 ### Installation Steps
 
 1. **Clone the Repository**
       ```bash
-      git clone https://github.com/yourusername/ai-chat-docker-bundle.git
-      cd ai-chat-docker-bundle
+      git clone https://github.com/cZalyun/ai-chat-docker-bundle.git
+      cd ai-chat-docker-bundle-test
       ```
 
 2. **Set Up Environment Variables**
